@@ -1,0 +1,40 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  max-width: 800px;
+  margin: auto;
+  background: #FFD700; /* Lagos yellow */
+  color: #006400; /* Nigeria green */
+  padding: 20px;
+}
+
+h1 {
+  font-family: 'Arial Black', sans-serif;
+  color: #006400;
+}
+
+label {
+  margin-right: 10px;
+}
+
+select, input {
+  border: 2px solid #006400;
+  padding: 5px;
+  margin: 5px 0;
+  background: white;
+  color: #006400;
+}
+
+.section {
+  margin: 20px 0;
+  padding: 10px;
+  border: 1px solid #006400;
+  border-radius: 5px;
+  background: rgba(255, 215, 0, 0.2);
+}
+
+p {
+  margin: 5px 0;
+}

@@ -1,0 +1,29 @@
+/* src/index.css */
+body {
+  margin: 0;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f4f7fa;
+}
+
+/* Custom button animation */
+.btn-primary {
+  transition: transform 0.2s, background-color 0.3s;
+}
+.btn-primary:hover {
+  transform: scale(1.05);
+}
+
+/* Input focus glow */
+.input-focus {
+  transition: box-shadow 0.3s;
+}
+.input-focus:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Map card shadow */
+.map-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
