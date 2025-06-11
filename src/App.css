@@ -1,40 +1,33 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-  font-family: Arial, sans-serif;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-.app {
-  max-width: 800px;
-  margin: auto;
-  background: #FFD700; /* Lagos yellow */
-  color: #006400; /* Nigeria green */
-  padding: 20px;
+.leaflet-container {
+  width: 100%;
+  height: 500px;
 }
 
-h1 {
-  font-family: 'Arial Black', sans-serif;
-  color: #006400;
+/* Custom styles for vertical navbar */
+.nav-link-active {
+  @apply bg-blue-700;
 }
 
-label {
-  margin-right: 10px;
+.nav-link-hover {
+  @apply hover:bg-blue-800;
 }
 
-select, input {
-  border: 2px solid #006400;
-  padding: 5px;
-  margin: 5px 0;
-  background: white;
-  color: #006400;
+/* Smooth transitions for inputs */
+input, select, textarea {
+  @apply transition duration-200;
 }
 
-.section {
-  margin: 20px 0;
-  padding: 10px;
-  border: 1px solid #006400;
-  border-radius: 5px;
-  background: rgba(255, 215, 0, 0.2);
-}
-
-p {
-  margin: 5px 0;
+/* Error message styling */
+.error {
+  @apply text-red-500 text-sm mt-1;
 }

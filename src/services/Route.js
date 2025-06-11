@@ -4,7 +4,7 @@ export async function getRoute(start, end) {
 
   try {
     // TomTom Routing API
-    const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start}:${end}/json?key=${TOMTOM_API_KEY}&maxAlternatives=1&traffic=true`;
+    const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start}:${end}/json?key=${TOMTOM_API_KEY}&maxAlternatives=2&traffic=true`;
     console.log('Fetching route from:', routeUrl);
     const routeResponse = await fetch(routeUrl);
     if (!routeResponse.ok) {
@@ -31,7 +31,7 @@ export async function getRoute(start, end) {
           return null;
         }
         return {
-          id: index === 0 ? 'main' : 'alternate',
+          id: index === 0 ? 'main' : `alternate${index}`,
           path: route.legs[0].points.map(point => [point.latitude, point.longitude]),
           color: index === 0 ? '#FF0000' : '#800080',
           eta: Math.round(route.summary.travelTimeInSeconds / 60),

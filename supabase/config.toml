@@ -1,0 +1,6 @@
+
+[auth]
+enabled = true
+[auth.email]
+enable_confirmations = true
+redirect_to = "http://localhost:3000/login"
