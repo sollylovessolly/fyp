@@ -19,7 +19,7 @@ function Map({ start, end, weather, selectedRoute, setSelectedRoute, currentLoca
   const [successMessage, setSuccessMessage] = useState(null);
   const mapRef = useRef();
 
-  const TOMTOM_API_KEY = 'LeXwLDzQwz2SPcRgrM1XFogEHinB21bM';
+  const TOMTOM_API_KEY = 'wWUgAICJV6TddDh554bKId8NnkK1RiAD';
 
   // Custom icons
   const startIcon = new L.Icon({
