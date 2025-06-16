@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, NavLink, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -18,11 +17,22 @@ export const locations = [
   { name: 'Banana Island', coords: '6.4678,3.4498' },
   { name: 'Eko Atlantic', coords: '6.4089,3.4068' },
   { name: 'CMS (Marina)', coords: '6.4503,3.3958' },
+  { name: 'Ajah', coords: '6.4653,3.6077' },
+  { name: '3rd Mainland Bridge', coords: '6.4983,3.4044' },
+  { name: 'Falomo', coords: '6.4514,3.4251' },
+  { name: 'Obalende', coords: '6.4468,3.4132' },
+  { name: 'Ijora', coords: '6.4686,3.3737' },
 ];
 
 function MainContent() {
-  const [start, setStart] = useState(locations[0]?.coords || '');
-  const [end, setEnd] = useState(locations[1]?.coords || '');
+  const [start, setStart] = useState(locations[0].coords); // Victoria Island
+  const [end, setEnd] = useState(locations[3].coords); // Banana Island
+  const [pendingStart, setPendingStart] = useState(locations[0].coords);
+  const [pendingEnd, setPendingEnd] = useState(locations[3].coords);
+  const [startMode, setStartMode] = useState('custom'); // 'current' or 'custom'
+  const [startQuery, setStartQuery] = useState(locations[0].name);
+  const [endQuery, setEndQuery] = useState(locations[3].name);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const [weather, setWeather] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState('main');
   const [error, setError] = useState(null);
@@ -30,8 +40,62 @@ function MainContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
+  const TOMTOM_API_KEY = '8HW8UzF88GLp2mL9myetUktvvhazsgkI';
   const showSidebar = !['/login', '/signup'].includes(location.pathname);
 
+  // Track current location
+  useEffect(() => {
+    let watchId = null;
+    if (startMode === 'current' && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation(`${latitude},${longitude}`);
+          setPendingStart(`${latitude},${longitude}`);
+          setStartQuery('Current Location');
+          console.log('Current location updated:', { latitude, longitude });
+        },
+        (err) => {
+          setError('Failed to get current location: ' + err.message);
+          console.error('Geolocation error:', err);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      );
+    }
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [startMode]);
+
+  // Handle search button click
+  const handleSearch = () => {
+    if (!pendingStart || !pendingEnd) {
+      setError('Please select a start and destination');
+      return;
+    }
+    console.log('handleSearch: Before update', { start, end, pendingStart, pendingEnd });
+    setStart(pendingStart);
+    setEnd(pendingEnd);
+    console.log('handleSearch: After update', { start: pendingStart, end: pendingEnd });
+  };
+
+  // Toggle start mode
+  const handleToggleStartMode = () => {
+    const newMode = startMode === 'current' ? 'custom' : 'current';
+    setStartMode(newMode);
+    if (newMode === 'current' && currentLocation) {
+      setPendingStart(currentLocation);
+      setStartQuery('Current Location');
+    } else {
+      setPendingStart(locations[0].coords);
+      setStartQuery(locations[0].name);
+    }
+    console.log('Start mode toggled to:', newMode);
+  };
+
+  // Fetch weather
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -83,7 +147,9 @@ function MainContent() {
       }
     };
 
-    fetchWeather();
+    if (start && end) {
+      fetchWeather();
+    }
     return () => subscription.unsubscribe();
   }, [start, end]);
 
@@ -199,22 +265,40 @@ function MainContent() {
                     )}
                     <div className="w-full max-w-md mx-auto bg-white p-6 rounded-lg">
                       <div className="mb-4">
-                        <label className="block text-gray-700 font-medium mb-2">Starting Point</label>
-                        <select
-                          value={start}
-                          onChange={(e) => setStart(e.target.value)}
-                          className="w-full p-3 border rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-yellow-500 transition"
+                        <button
+                          onClick={handleToggleStartMode}
+                          className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
                         >
-                          {locations.map(loc => (
-                            <option key={loc.name} value={loc.coords}>{loc.name}</option>
-                          ))}
-                        </select>
+                          {startMode === 'current' ? 'Use Custom Start Point' : 'Use Current Location'}
+                        </button>
                       </div>
+                      {startMode === 'custom' && (
+                        <div className="mb-4">
+                          <label className="block text-gray-700 font-medium mb-2">Select Starting Point</label>
+                          <select
+                            value={pendingStart}
+                            onChange={(e) => {
+                              setPendingStart(e.target.value);
+                              setStartQuery(locations.find(loc => loc.coords === e.target.value)?.name || '');
+                              console.log('Start dropdown changed:', { pendingStart: e.target.value, startQuery: locations.find(loc => loc.coords === e.target.value)?.name });
+                            }}
+                            className="w-full p-3 border rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-yellow-500 transition"
+                          >
+                            {locations.map(loc => (
+                              <option key={loc.name} value={loc.coords}>{loc.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="mb-4">
-                        <label className="block text-gray-700 font-medium mb-2">Destination</label>
+                        <label className="block text-gray-700 font-medium mb-2">Select Destination</label>
                         <select
-                          value={end}
-                          onChange={(e) => setEnd(e.target.value)}
+                          value={pendingEnd}
+                          onChange={(e) => {
+                            setPendingEnd(e.target.value);
+                            setEndQuery(locations.find(loc => loc.coords === e.target.value)?.name || '');
+                            console.log('End dropdown changed:', { pendingEnd: e.target.value, endQuery: locations.find(loc => loc.coords === e.target.value)?.name });
+                          }}
                           className="w-full p-3 border rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-yellow-500 transition"
                         >
                           {locations.map(loc => (
@@ -222,6 +306,12 @@ function MainContent() {
                           ))}
                         </select>
                       </div>
+                      <button
+                        onClick={handleSearch}
+                        className="w-full p-3 bg-yellow-500 text-gray-800 rounded-lg hover:bg-yellow-600 transition"
+                      >
+                        Search
+                      </button>
                     </div>
                     <Map
                       start={start}
@@ -229,6 +319,8 @@ function MainContent() {
                       weather={weather}
                       selectedRoute={selectedRoute}
                       setSelectedRoute={setSelectedRoute}
+                      currentLocation={startMode === 'current' ? currentLocation : null}
+                      key={`${start}-${end}`}
                     />
                     <div className="w-full max-w-md mx-auto mt-8">
                       <Traffic weather={weather} />
