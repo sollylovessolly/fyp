@@ -1,5 +1,6 @@
-import TrafficAlert from './components/TrafficAlert';
+import TrafficAlert from "./components/CongestionAlert";
 import React, { useState, useEffect } from "react";
+import WeatherForecast from "./components/WeatherForecast";
 import {
   BrowserRouter as Router,
   Route,
@@ -17,19 +18,34 @@ import Signup from "./components/Signup";
 import Profile from "./components/Profile";
 import SavedRoutes from "./components/SavedRoutes";
 import "./App.css";
+import CongestionAlert from "./components/CongestionAlert";
 
 export const locations = [
+  // Business/Commercial Areas
+  { name: "Lagos Island (CMS)", coords: "6.4503,3.3958" },
+  { name: "Marina Lagos", coords: "6.4520,3.3945" },
+  { name: "Broad Street", coords: "6.4512,3.3962" },
+  { name: "Tafawa Balewa Square", coords: "6.4498,3.3952" },
+
+  // Upscale Residential/Business
   { name: "Victoria Island", coords: "6.4541,3.3947" },
-  { name: "Lekki Phase 1", coords: "6.4691,3.5851" },
   { name: "Ikoyi", coords: "6.4590,3.4365" },
   { name: "Banana Island", coords: "6.4678,3.4498" },
-  { name: "Eko Atlantic", coords: "6.4089,3.4068" },
-  { name: "CMS (Marina)", coords: "6.4503,3.3958" },
-  { name: "Ajah", coords: "6.4653,3.6077" },
-  { name: "3rd Mainland Bridge", coords: "6.4983,3.4044" },
-  { name: "Falomo", coords: "6.4514,3.4251" },
-  { name: "Obalende", coords: "6.4468,3.4132" },
-  { name: "Ijora", coords: "6.4686,3.3737" },
+  { name: "Parkview Estate Ikoyi", coords: "6.4612,3.4445" },
+
+  // Modern Developments
+  { name: "Eko Atlantic City", coords: "6.4089,3.4068" },
+  { name: "Lekki Phase 1", coords: "6.4691,3.5851" },
+  { name: "Lekki VI (New)", coords: "6.4275,3.4647" },
+
+  // Key Transport/Commercial Hubs
+  { name: "National Theatre", coords: "6.4641,3.3803" },
+  { name: "Apongbon Market", coords: "6.4569,3.3891" },
+  { name: "Idumota Market", coords: "6.4542,3.3889" },
+
+  // Mainland connections (for cross-routes)
+  { name: "Yaba", coords: "6.5133,3.3705" },
+  { name: "Surulere", coords: "6.4969,3.3540" },
 ];
 
 function MainContent() {
@@ -49,8 +65,8 @@ function MainContent() {
   const location = useLocation();
   const [isPredicting, setIsPredicting] = useState(false);
 
-// Add this state
-const [trafficPrediction, setTrafficPrediction] = useState(null);
+  // Add this state
+  const [trafficPrediction, setTrafficPrediction] = useState(null);
 
   const TOMTOM_API_KEY = "8HW8UzF88GLp2mL9myetUktvvhazsgkI";
   const showSidebar = !["/login", "/signup"].includes(location.pathname);
@@ -81,68 +97,80 @@ const [trafficPrediction, setTrafficPrediction] = useState(null);
     };
   }, [startMode]);
   // ! ================================================================
-const predictCongestion = async (start, end) => {
-  try {
-    setError(null);
+  const predictCongestion = async (start, end) => {
+    try {
+      setError(null);
 
-    const response = await fetch("http://localhost:8000/predict", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ start, end }),
-    });
+      const response = await fetch("http://localhost:8000/congestion", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ start, end }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Prediction failed");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Prediction failed");
+      }
+
+      const result = await response.json();
+      console.log("Prediction result:", result);
+
+      // Set the traffic prediction state for the enhanced UI
+      setTrafficPrediction(result);
+
+      return result;
+    } catch (err) {
+      console.error("Error fetching prediction:", err.message);
+      setError(`Traffic prediction failed: ${err.message}`);
+      return null;
+    }
+  };
+
+  // In your App.js, modify the trafficPrediction state effect
+  useEffect(() => {
+    if (trafficPrediction && trafficPrediction.status === "info") {
+      // Auto-dismiss info messages after 8 seconds
+      const timer = setTimeout(() => {
+        setTrafficPrediction(null);
+      }, 120000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [trafficPrediction]);
+
+  const handleSearch = async () => {
+    if (!pendingStart || !pendingEnd) {
+      setError("Please select a start and destination");
+      return;
     }
 
-    const result = await response.json();
-    console.log("Prediction result:", result);
+    console.log("handleSearch: Before update", {
+      start,
+      end,
+      pendingStart,
+      pendingEnd,
+    });
 
-    // Set the traffic prediction state instead of using alert
-    setTrafficPrediction(result);
+    setStart(pendingStart);
+    setEnd(pendingEnd);
 
-    return result;
-  } catch (err) {
-    console.error("Error fetching prediction:", err.message);
-    setError(`Traffic prediction failed: ${err.message}`);
-    return null;
-  }
-};
+    console.log("handleSearch: After update", {
+      start: pendingStart,
+      end: pendingEnd,
+    });
 
-const handleSearch = async () => {
-  if (!pendingStart || !pendingEnd) {
-    setError("Please select a start and destination");
-    return;
-  }
+    // Show loading state
+    setIsPredicting(true);
 
-  console.log("handleSearch: Before update", {
-    start,
-    end,
-    pendingStart,
-    pendingEnd,
-  });
-
-  setStart(pendingStart);
-  setEnd(pendingEnd);
-
-  console.log("handleSearch: After update", {
-    start: pendingStart,
-    end: pendingEnd,
-  });
-
-  // Show loading state
-  setIsPredicting(true);
-
-  try {
-    // Fire the backend traffic prediction
-    await predictCongestion(pendingStart, pendingEnd);
-  } finally {
-    setIsPredicting(false);
-  }
-};
+    try {
+      // Fire the backend traffic prediction
+      await predictCongestion(pendingStart, pendingEnd);
+    } finally {
+      setIsPredicting(false);
+    }
+  };
   // Toggle start mode
   const handleToggleStartMode = () => {
     const newMode = startMode === "current" ? "custom" : "current";
@@ -353,7 +381,7 @@ const handleSearch = async () => {
                       </div>
                     )}
                     {trafficPrediction && (
-                      <TrafficAlert
+                      <CongestionAlert
                         prediction={trafficPrediction}
                         onClose={() => setTrafficPrediction(null)}
                       />
@@ -437,6 +465,12 @@ const handleSearch = async () => {
                         {isPredicting ? "Analyzing Traffic..." : "Search"}
                       </button>
                     </div>
+                    {/* Add Weather Forecast */}
+                    {trafficPrediction?.weather_forecast && (
+                      <WeatherForecast
+                        weatherForecast={trafficPrediction.weather_forecast}
+                      />
+                    )}
                     <Map
                       start={start}
                       end={end}
