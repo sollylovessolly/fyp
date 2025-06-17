@@ -3,28 +3,31 @@ from pydantic import BaseModel
 import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
+import joblib
+import random
+
+app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 app = FastAPI()
 
+# Allow requests from your frontend (React dev server runs on localhost:3000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or specify frontend URL: ["http://localhost:3000"]
+    allow_origins=["*"],  # Or ["*"] for all origins (use with caution)
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # Or ["POST", "GET"]
     allow_headers=["*"],
 )
 
 
-# Load your trained model
+# Load model and scaler
 model = load_model("lstm_model.keras")
+scaler = joblib.load("scaler.pkl")
 
-# Dummy scaler (replace with real scaler values if you saved them)
-scaler = MinMaxScaler()
-scaler.fit(np.random.rand(100, 8))  # Replace with actual fit data from training
+# Toggle for simulating congestion during testing
+SIMULATE_CONGESTION = False
 
-# Define request body
 class TrafficData(BaseModel):
     current_speed: float
     free_flow_speed: float
@@ -38,31 +41,46 @@ class TrafficData(BaseModel):
 @app.post("/predict")
 def predict_travel_time(data: TrafficData):
     try:
-        # Convert to numpy
-        features = np.array([
-            [
-                data.current_speed,
-                data.free_flow_speed,
-                data.delay_seconds,
-                data.hour,
-                data.day_of_week,
-                data.is_rush_hour,
-                data.is_weekend,
-                data.is_lagos_hotspot
-            ]
-        ])
+        features = np.array([[
+            data.current_speed,
+            data.free_flow_speed,
+            data.delay_seconds,
+            data.hour,
+            data.day_of_week,
+            data.is_rush_hour,
+            data.is_weekend,
+            data.is_lagos_hotspot
+        ]])
 
-        # Scale features
+        # Scale and reshape input
         scaled = scaler.transform(features)
-
-        # Reshape for LSTM: (1, window_size, num_features)
         input_seq = np.repeat(scaled, 6, axis=0).reshape(1, 6, 8)
 
-        # Predict
+        # Predict travel time
         pred = model.predict(input_seq)[0][0]
 
-        # Optionally inverse scale (if you saved original scaler)
-        return {"predicted_travel_time": float(pred)}
+        # OPTIONAL: simulate congestion for testing
+        if SIMULATE_CONGESTION:
+            if random.random() < 0.3:  # 30% chance
+                pred += random.randint(180, 600)  # add 3-10 mins
+
+        # Use free flow travel time as baseline (if known), or estimate
+        free_flow_time = data.free_flow_speed / data.current_speed * pred if data.current_speed else pred
+        delay = pred - free_flow_time
+
+        # Categorize congestion warning
+        if delay > 300:
+            warning_msg = "🚨 Severe congestion expected in ~5 minutes. Consider alternate routes!"
+        elif delay > 180:
+            warning_msg = "⚠️ Moderate congestion expected in a few minutes."
+        else:
+            warning_msg = "✅ Route is mostly clear."
+
+        return {
+            "predicted_travel_time": float(pred),
+            "delay_seconds": float(delay),
+            "message": warning_msg
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
