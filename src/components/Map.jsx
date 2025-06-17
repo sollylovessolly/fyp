@@ -19,7 +19,7 @@ function Map({ start, end, weather, selectedRoute, setSelectedRoute, currentLoca
   const [successMessage, setSuccessMessage] = useState(null);
   const mapRef = useRef();
 
-  const TOMTOM_API_KEY = 'wWUgAICJV6TddDh554bKId8NnkK1RiAD';
+  const TOMTOM_API_KEY = 'LeXwLDzQwz2SPcRgrM1XFogEHinB21bM';
 
   // Custom icons
   const startIcon = new L.Icon({
@@ -320,18 +320,16 @@ function Map({ start, end, weather, selectedRoute, setSelectedRoute, currentLoca
     setError(null);
     try {
       const [lat, lon] = start.split(',').map(Number);
-      const { data, error: incidentError } = await supabase.from('incidents').insert([
-        {
-          user_id: (await supabase.auth.getUser()).data.user.id,
-          location_lat: lat,
-          location_lon: lon,
-          geom: `SRID=4326;POINT(${lon} ${lat})`,
-          type: incidentType,
-          description: incidentDesc.trim(),
-          is_verified: false,
-          created_at: new Date().toISOString(),
-        },
-      ]).select();
+      const { data, error: incidentError } = await supabase.from('incidents').insert([{
+        user_id: (await supabase.auth.getUser()).data.user.id,
+        location_lat: lat,
+        location_lon: lon,
+        geom: `SRID=4326;POINT(${lon} ${lat})`,
+        type: incidentType,
+        description: incidentDesc.trim(),
+        is_verified: false,
+        created_at: new Date().toISOString(),
+      }]).select();
       if (incidentError) throw incidentError;
       setShowReportForm(false);
       setIncidentDesc('');
@@ -506,21 +504,19 @@ function Map({ start, end, weather, selectedRoute, setSelectedRoute, currentLoca
             <Popup>Destination</Popup>
           </Marker>
         )}
-        {routes
-          .filter(route => route.name === selectedRoute)
-          .map(route => (
-            <React.Fragment key={route.id}>
-              {trafficSegments[route.name]?.map((segment, idx) => (
-                <Polyline
-                  key={`${route.id}-${idx}`}
-                  positions={segment.coordinates || []}
-                  color={getSegmentColor(segment.ratio)}
-                  weight={5}
-                  opacity={1}
-                />
-              ))}
-            </React.Fragment>
-          ))}
+        {routes.map(route => (
+          <React.Fragment key={route.id}>
+            {trafficSegments[route.name]?.map((segment, idx) => (
+              <Polyline
+                key={`${route.id}-${idx}`}
+                positions={segment.coordinates || []}
+                color={getSegmentColor(segment.ratio)}
+                weight={route.name === selectedRoute ? 5 : 3}
+                opacity={route.name === selectedRoute ? 1 : 0.6}
+              />
+            ))}
+          </React.Fragment>
+        ))}
         {incidents.map((incident) => (
           <Marker
             key={incident.id}
